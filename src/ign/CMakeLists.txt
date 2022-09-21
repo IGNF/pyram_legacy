@@ -1,0 +1,5 @@
+add_subdirectory("core")
+add_subdirectory("numeric")
+add_subdirectory("data")
+add_subdirectory("transform")
+add_subdirectory("image")
