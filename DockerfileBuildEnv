@@ -1,0 +1,184 @@
+FROM ubuntu:20.04
+LABEL Description="IGNF Pyram legacy build environment"
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV CPUS 2
+
+SHELL ["/bin/bash", "-c"]
+
+RUN apt-get update 
+
+RUN apt-get -y --no-install-recommends install \
+    build-essential \
+    clang \
+    cmake \
+    gdb \
+    wget
+
+RUN apt-get -y --no-install-recommends install \
+   unzip \
+   pkg-config \
+   zlib1g-dev \
+   libfreexl-dev \ 
+   libxml2-dev \
+   nasm \
+   libpng-dev
+
+WORKDIR /tmp
+
+ENV BOOST_VERSION 1.71.0
+RUN export BOOST_VERSION_NAME=$( echo ${BOOST_VERSION} | tr '.' '_' ) && echo "boost name ${BOOST_VERSION_NAME}" && \ 
+    wget --no-check-certificate --quiet https://boostorg.jfrog.io/artifactory/main/release/${BOOST_VERSION}/source/boost_${BOOST_VERSION_NAME}.tar.gz  \
+    && tar xzf ./boost_${BOOST_VERSION_NAME}.tar.gz  \
+    && cd ./boost_${BOOST_VERSION_NAME}  \
+    && ./bootstrap.sh  \
+    && ./b2 install  \
+    && cd ..  \
+    && rm -rf ./boost_{BOOST_VERSION_NAME} \
+    && rm ./boost_${BOOST_VERSION_NAME}.tar.gz
+
+ENV WEBP_VERSION 1.0.0
+RUN wget --no-check-certificate -q https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-${WEBP_VERSION}.tar.gz  \
+    && tar xzf libwebp-${WEBP_VERSION}.tar.gz \
+    && cd libwebp-${WEBP_VERSION} \
+    && CFLAGS="-O2 -Wl,-S" ./configure --enable-silent-rules \
+    && echo "building WEBP ${WEBP_VERSION}..." \
+    && make --quiet -j${CPUS} && make --quiet install \
+    && cd .. && rm -rf libwebp-${WEBP_VERSION} \
+    && rm libwebp-${WEBP_VERSION}.tar.gz
+
+ENV ZSTD_VERSION 1.3.4
+RUN wget --no-check-certificate -q -O zstd-${ZSTD_VERSION}.tar.gz https://github.com/facebook/zstd/archive/v${ZSTD_VERSION}.tar.gz \
+    && tar -zxf zstd-${ZSTD_VERSION}.tar.gz \
+    && cd zstd-${ZSTD_VERSION} \
+    && echo "building ZSTD ${ZSTD_VERSION}..." \
+    && make --quiet -j${CPUS} ZSTD_LEGACY_SUPPORT=0 CFLAGS=-O1 \
+    && make --quiet install ZSTD_LEGACY_SUPPORT=0 CFLAGS=-O1 \
+    && cd .. && rm -rf zstd-${ZSTD_VERSION} \
+    && rm zstd-${ZSTD_VERSION}.tar.gz
+
+
+ENV LIBDEFLATE_VERSION 1.7
+RUN wget --no-check-certificate -q https://github.com/ebiggers/libdeflate/archive/v${LIBDEFLATE_VERSION}.tar.gz \
+    && tar -zxf v${LIBDEFLATE_VERSION}.tar.gz \
+    && cd libdeflate-${LIBDEFLATE_VERSION} \
+    && echo "building libdeflate ${LIBDEFLATE_VERSION}..." \
+    && make -j${CPUS} \
+    && make --quiet install \
+    && cd .. && rm -rf libdeflate-${LIBDEFLATE_VERSION} \
+    && rm v${LIBDEFLATE_VERSION}.tar.gz
+
+ENV LIBJPEG_TURBO_VERSION 2.0.5
+RUN wget --no-check-certificate -q https://github.com/libjpeg-turbo/libjpeg-turbo/archive/${LIBJPEG_TURBO_VERSION}.tar.gz \
+    && tar -zxf ${LIBJPEG_TURBO_VERSION}.tar.gz \
+    && cd libjpeg-turbo-${LIBJPEG_TURBO_VERSION} \
+    && echo "building libjpeg-turbo ${LIBJPEG_TURBO_VERSION}..." \
+    && cmake -G"Unix Makefiles" -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_BUILD_TYPE=Release . \
+    && make -j${CPUS} \
+    && make --quiet install \
+    && cd .. && rm -rf libjpeg-turbo-${LIBJPEG_TURBO_VERSION} \
+    && rm ${LIBJPEG_TURBO_VERSION}.tar.gz
+
+ENV GEOS_VERSION 3.9.1
+RUN wget --no-check-certificate -q https://download.osgeo.org/geos/geos-${GEOS_VERSION}.tar.bz2 \
+    && tar -xjf geos-${GEOS_VERSION}.tar.bz2  \
+    && cd geos-${GEOS_VERSION} \
+    && ./configure --prefix=/usr/local \
+    && echo "building geos ${GEOS_VERSION}..." \
+    && make --quiet -j${CPUS} && make --quiet install \
+    && cd ../ && rm -rf geos-${GEOS_VERSION} \
+    && rm geos-${GEOS_VERSION}.tar.bz2
+
+ENV SQLITE_VERSION 3330000
+ENV SQLITE_YEAR 2020
+RUN wget --no-check-certificate -q https://sqlite.org/${SQLITE_YEAR}/sqlite-autoconf-${SQLITE_VERSION}.tar.gz \
+    && tar -xzf sqlite-autoconf-${SQLITE_VERSION}.tar.gz && cd sqlite-autoconf-${SQLITE_VERSION} \
+    && ./configure --prefix=/usr/local \
+    && echo "building SQLITE ${SQLITE_VERSION}..." \
+    && make --quiet -j${CPUS} && make --quiet install \
+    && cd ../ && rm -rf sqlite-autoconf-${SQLITE_VERSION} \
+    && rm sqlite-autoconf-${SQLITE_VERSION}.tar.gz
+
+ENV LIBTIFF_VERSION=4.2.0
+RUN wget --no-check-certificate -q https://download.osgeo.org/libtiff/tiff-${LIBTIFF_VERSION}.tar.gz \
+    && tar -xzf tiff-${LIBTIFF_VERSION}.tar.gz \
+    && cd tiff-${LIBTIFF_VERSION} \
+    && ./configure --prefix=/usr/local \
+    && echo "building libtiff ${LIBTIFF_VERSION}..." \
+    && make --quiet -j${CPUS} && make --quiet install \
+    && cd ../ && rm -rf tiff-${LIBTIFF_VERSION} \
+    && rm tiff-${LIBTIFF_VERSION}.tar.gz
+
+ENV NGHTTP2_VERSION 1.42.0
+RUN wget --no-check-certificate https://github.com/nghttp2/nghttp2/releases/download/v${NGHTTP2_VERSION}/nghttp2-${NGHTTP2_VERSION}.tar.gz \
+    && tar -xzf nghttp2-${NGHTTP2_VERSION}.tar.gz \
+    && cd nghttp2-${NGHTTP2_VERSION} \
+    && echo "building NGHTTP2 ${NGHTTP2_VERSION}..." \
+    && ./configure --enable-lib-only --prefix=/usr/local \
+    && make --quiet -j${CPUS} && make --quiet install \
+    && cd ../ && rm -rf nghttp2-${NGHTTP2_VERSION} \
+    && rm nghttp2-${NGHTTP2_VERSION}.tar.gz
+
+ENV CURL_VERSION 7.73.0
+RUN wget --no-check-certificate -q https://curl.haxx.se/download/curl-${CURL_VERSION}.tar.gz \
+    && tar -xzf curl-${CURL_VERSION}.tar.gz && cd curl-${CURL_VERSION} \
+    && ./configure --prefix=/usr/local \
+    && echo "building CURL ${CURL_VERSION}..." \
+    && make --quiet -j${CPUS} && make --quiet install \
+    && cd ../ && rm -rf curl-${CURL_VERSION} \
+    && rm curl-${CURL_VERSION}.tar.gz
+
+ENV PROJ_VERSION 8.2.1
+RUN wget --no-check-certificate -q https://download.osgeo.org/proj/proj-${PROJ_VERSION}.tar.gz \
+    && tar -xzf proj-${PROJ_VERSION}.tar.gz \
+    && cd proj-${PROJ_VERSION} \
+    && mkdir build && cd build \
+    && cmake .. -DCMAKE_BUILD_TYPE=Release \
+    && echo "building proj ${PROJ_VERSION}..." \
+    && make --quiet -j${CPUS} && make --quiet install \
+    && cd ../../ && rm -rf proj-${PROJ_VERSION} \
+    && rm proj-${PROJ_VERSION}.tar.gz
+
+ENV LIBGEOTIFF_VERSION=1.6.0
+RUN wget --no-check-certificate -q https://github.com/OSGeo/libgeotiff/releases/download/${LIBGEOTIFF_VERSION}/libgeotiff-${LIBGEOTIFF_VERSION}.tar.gz \
+    && tar -xzf libgeotiff-${LIBGEOTIFF_VERSION}.tar.gz \
+    && cd libgeotiff-${LIBGEOTIFF_VERSION} \
+    && ./configure --prefix=/usr/local --with-zlib \
+    && echo "building libgeotiff ${LIBGEOTIFF_VERSION}..." \
+    && make --quiet -j${CPUS} && make --quiet install \
+    && cd ../ && rm -rf libgeotiff-${LIBGEOTIFF_VERSION} \
+    && rm libgeotiff-${LIBGEOTIFF_VERSION}.tar.gz
+
+ENV OPENJPEG_VERSION 2.3.1
+RUN wget --no-check-certificate -q -O openjpeg-${OPENJPEG_VERSION}.tar.gz https://github.com/uclouvain/openjpeg/archive/v${OPENJPEG_VERSION}.tar.gz \
+    && tar -zxf openjpeg-${OPENJPEG_VERSION}.tar.gz \
+    && cd openjpeg-${OPENJPEG_VERSION} \
+    && mkdir build && cd build \
+    && cmake .. -DBUILD_THIRDPARTY:BOOL=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local \
+    && echo "building openjpeg ${OPENJPEG_VERSION}..." \
+    && make --quiet -j${CPUS} && make --quiet install \
+    && cd ../../ && rm -rf openjpeg-${OPENJPEG_VERSION} \
+    && rm openjpeg-${OPENJPEG_VERSION}.tar.gz
+
+
+ENV GDAL_SHORT_VERSION 3.5.1
+ENV GDAL_VERSION 3.5.1
+RUN wget --no-check-certificate -q https://download.osgeo.org/gdal/${GDAL_SHORT_VERSION}/gdal-${GDAL_VERSION}.tar.gz \
+    && tar -zxf gdal-${GDAL_VERSION}.tar.gz \
+    && cd gdal-${GDAL_VERSION} \
+    && mkdir build && cd build \
+    && cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local -DGDAL_USE_INTERNAL_LIBS=ON -DGDAL_USE_SPATIALITE=OFF \
+    && echo "building gdal ${GDAL_VERSION}..." \
+    && make --quiet -j${CPUS} && make --quiet install \
+    && cd ../../ && rm -rf gdal-${GDAL_VERSION} \
+    && rm gdal-${GDAL_VERSION}.tar.gz
+
+COPY . /tmp/pyram
+
+RUN cd /tmp/pyram \
+    && mkdir build && cd build \
+    && cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local \
+    && echo "building pyram" \
+    && make --quiet -j${CPUS} && make --quiet install
+
+
