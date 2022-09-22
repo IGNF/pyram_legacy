@@ -1,6 +1,26 @@
 FROM ubuntu:20.04
 LABEL Description="IGNF Pyram legacy build environment"
 
+
+#--------------------------------------------------------------------------------
+# Config  proxy 
+#--------------------------------------------------------------------------------
+ARG http_proxy=""
+ENV http_proxy=${http_proxy}
+ENV HTTP_PROXY=${http_proxy}
+
+ARG https_proxy=""
+ENV https_proxy=${https_proxy}
+ENV HTTPS_PROXY=${https_proxy}
+
+ARG no_proxy=""
+ENV no_proxy=${no_proxy}
+ENV NO_PROXY=${no_proxy}
+
+
+#--------------------------------------------------------------------------------
+# Update and install dev/compil package 
+#--------------------------------------------------------------------------------
 ENV DEBIAN_FRONTEND=noninteractive
 ENV CPUS 2
 
@@ -26,6 +46,10 @@ RUN apt-get -y --no-install-recommends install \
 
 WORKDIR /tmp
 
+
+#--------------------------------------------------------------------------------
+# dev/install Boost
+#--------------------------------------------------------------------------------
 ENV BOOST_VERSION 1.71.0
 RUN export BOOST_VERSION_NAME=$( echo ${BOOST_VERSION} | tr '.' '_' ) && echo "boost name ${BOOST_VERSION_NAME}" && \ 
     wget --no-check-certificate --quiet https://boostorg.jfrog.io/artifactory/main/release/${BOOST_VERSION}/source/boost_${BOOST_VERSION_NAME}.tar.gz  \
@@ -37,6 +61,11 @@ RUN export BOOST_VERSION_NAME=$( echo ${BOOST_VERSION} | tr '.' '_' ) && echo "b
     && rm -rf ./boost_{BOOST_VERSION_NAME} \
     && rm ./boost_${BOOST_VERSION_NAME}.tar.gz
 
+
+#--------------------------------------------------------------------------------
+# dev/install GDAL and needed drivers/libraries minimal dependencies
+# mainly use drivers for reading raster data and not vector data
+#--------------------------------------------------------------------------------
 ENV WEBP_VERSION 1.0.0
 RUN wget --no-check-certificate -q https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-${WEBP_VERSION}.tar.gz  \
     && tar xzf libwebp-${WEBP_VERSION}.tar.gz \
@@ -173,6 +202,9 @@ RUN wget --no-check-certificate -q https://download.osgeo.org/gdal/${GDAL_SHORT_
     && cd ../../ && rm -rf gdal-${GDAL_VERSION} \
     && rm gdal-${GDAL_VERSION}.tar.gz
 
+#--------------------------------------------------------------------------------
+# dev/install Pyram
+#--------------------------------------------------------------------------------
 COPY . /tmp/pyram
 
 RUN cd /tmp/pyram \
@@ -181,4 +213,4 @@ RUN cd /tmp/pyram \
     && echo "building pyram" \
     && make --quiet -j${CPUS} && make --quiet install
 
-
+RUN ldconfig
