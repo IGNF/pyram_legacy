@@ -47,6 +47,7 @@ CTestTestfile.cmake
 _deps
 
 build/*
+docs/_build/*
 
 ## Visual Studio Code
 

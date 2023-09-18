@@ -1,0 +1,11 @@
+# Table of contents
+# Learn more at https://jupyterbook.org/customize/toc.html
+
+format: jb-book
+root: intro
+chapters:
+  - file: quickstart.md
+  - file: install.md
+  - file: user_manual.md
+  - file: development.md
+
